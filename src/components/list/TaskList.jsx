@@ -69,7 +69,7 @@ const insertNewItemOnEnterKey = (e) => e.key === 'Enter' && addNewTask();
 return (
     <>
     <header className="flex justify-between">
-        <h1 className="title mt-4 mb-0" >Task List</h1>
+        <h1 className="title mt-4 mb-0" >Task List V2</h1>
         <motion.button 
         whileHover={{ scale:1.05 }}
         className="btn-settings py-1 px-3"
