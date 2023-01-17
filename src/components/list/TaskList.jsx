@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { addTask, getTasks, toggleComplete } from '../../firebase/taskController';
+import { async } from '@firebase/util';
 
 /**
  * Componente que gestiona la lista de tareas
@@ -11,6 +13,12 @@ import { motion } from 'framer-motion';
 const TaskList = ({ showSettings, setshowSettings}) => {
     const [newTask, setNewTask] = useState('');
     const [tasklist, setTasklist] = useState([]);
+
+    useEffect(() => {
+        getTasks()
+            .then((tasks) => setTasklist([...tasks]))
+            .catch((e) => console.error(e));
+    }, []);
     
 
 /**
@@ -21,8 +29,14 @@ const TaskList = ({ showSettings, setshowSettings}) => {
 
 const addNewTask = () => {
     if(newTask === "") return;
-    setTasklist([...tasklist, { task: newTask, completed: false }]);
-    setNewTask('');
+    const task = { task: newTask, completed:false };
+    addTask(task)
+        .then(() => {
+            setTasklist([...tasklist, task])
+        })
+        .catch(e => console.error(e))
+        .finally(() => setNewTask(''))
+
     return true;
 };
 
@@ -55,9 +69,15 @@ const removeItem = (index) => {
 */
 
 const toggleCompleteItem = (index) => {
-    const newTaskList = tasklist;
-    newTaskList[index].completed = !newTaskList[index].completed;
-    setTasklist([...newTaskList]);
+    let task = tasklist.find(t => t.id === index);
+    toggleComplete(task)
+        .then(async () => {
+            const newTaskList = await getTasks();
+            return setTasklist([
+                ...newTaskList
+            ])
+        })
+        .catch((e) => console.error(e))
 };
 
 /**
@@ -71,9 +91,9 @@ return (
     <header className="flex justify-between">
         <h1 className="title mt-4 mb-0" >Task List V3</h1>
         <motion.button 
-        whileHover={{ scale:1.05 }}
-        className="btn-settings py-1 px-3"
-        onClick={() => setshowSettings(!showSettings)}>{!showSettings ? "Settings" : "Hide"}</motion.button>
+            whileHover={{ scale:1.05 }}
+            className="btn-settings py-1 px-3"
+            onClick={() => setshowSettings(!showSettings)}>{!showSettings ? "Settings" : "Hide"}</motion.button>
     </header>
     <div className="my-4">
         <input
@@ -88,23 +108,31 @@ return (
             Create Task
         </button>
     </div>
-        {isTasksEmpty() ? (
-        <p className='ml-2 text-gray-800 text-sm italic text-slate-600 dark:text-slate-300'>Task List is Empty</p>
+    {isTasksEmpty() ? (
+        <p>Task List is Empty</p>
         ) : (
-            <ul>
-                {tasklist.map((item, index) => (
-                <li key={index}>
-                <input
-                    type="checkbox"
-                    // onClick={() => removeItem(index)}
-                    onClick={() => toggleCompleteItem(index)}
-                    checked={item.completed}
-                    onChange={() => {}}
-                />
-                    <span className={`ml-2 text-gray-800 dark:text-white text-sm italic ${item.completed && "line-through"}`}>{item.task}</span>
-                </li>
-                ))}
-            </ul>
+        <ul className="todo-list">
+            {tasklist.map((item, index) => (
+                <motion.li initial={{ x: "100vw" }} animate={{ x: 0 }} key={index}>
+                <label className="cursor-pointer">
+                    <input
+                        type="checkbox"
+                        // onClick={() => removeItem(index)}
+                        onClick={() => toggleCompleteItem(item.id)}
+                        checked={item.completed}
+                        onChange={() => {}}
+                    />
+                    <span
+                        className={`ml-2 text-gray-800 dark:text-gray-100 text-sm italic ${
+                            item.completed && "line-through"
+                        }`}
+                    >
+                        {item.task}
+                    </span>
+                </label>
+                </motion.li>
+            ))}
+        </ul>
         )}
     </>
     );
